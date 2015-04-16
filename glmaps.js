@@ -1,116 +1,193 @@
-;(function (GoogleMaps) {
-  'use strict';
+;
+(function (GoogleMaps) {
+    'use strict';
+    
+    var Glmaps = window.Glmaps = function (options) {
+        /*Map Container*/
+        this.container = document.getElementById(options.container);
+        
+        this.defaultLocationByName = options.defaultLocationByName;
+        /*Default Position : Can be blank  Default will be 0,0*/
+        this.defaultPosition = options.defaultPosition;
+        /*Default Markers : Can be blank*/
+        this.markers = options.markers;
+        /*Default zoom level*/
+        this.zoom = 6;
+        
+        this.defaultIcon = '';
 
-  var Glmaps = window.Glmaps = function (options) {
-    this.container = document.getElementById(options.container);
+        return this.init();
+    };
 
-    this.defaultPosition = options.defaultPosition;
+    Glmaps.prototype = {
+        
+        /*Initialize map*/
+        init: function () {
+            return this
+                .createMap()
+                ;
+        },
+        
+        /*Creating map*/
+        createMap: function () {
+            
+            var mapOptions = {
+                zoom: this.zoom,
+//                disableDefaultUI: true,
+//                panControl: false,
+//                zoomControl: false,
+//                scaleControl: true,
+                mapTypeId: GoogleMaps.MapTypeId.TERRAIN,
+                streetViewControl: false,
+                center: new GoogleMaps.LatLng(this.defaultPosition.latitude, this.defaultPosition.longitude),
+            };
+                
+            this.map = new GoogleMaps.Map(this.container,mapOptions);
+            return this;
+        },
+        
+        setMapCenter : function (position) {
+            this.map.setCenter(position);
+        },
 
-    this.markers = options.markers;
+        /*Add Marker to map*/
+        addMarkers: function (markersSet) {
+            markersSet.forEach(this.createMarker.bind(this));
+            return this;
+        },
 
-    this.zoom = options.zoom;
+        /*User created marker*/
+        createUserMarker: function () {
+            var marker = this.userMarker = this.createMarker({
+                position: this.defaultPosition
+            });
 
-    return this.init();
-  };
+            marker.setClickable(false);
+            return this;
+        },
+        
+        /*Create new marker*/
+        createMarker: function (marker) {            
+            var marker = new GoogleMaps.Marker({
+                icon: marker.icon,
+                map: this.map,
+                position: this.toLatLng(marker.position)
+            });
+            this.markers.push(marker);
+            
+            this.createInfoWindow(marker.icon,marker);
+            return marker;
+        },
+        
+        createInfoWindow: function (content,marker) {
+            
+            var infowindow = new GoogleMaps.InfoWindow({
+                content: content,
+                maxWidth: 300
+            });
+            
+            GoogleMaps.event.addListener(marker, 'click', (function(marker, i) {
+                return function() {
+                    infowindow.open(this.map, marker);
+                }
+            })(marker));
+        },
 
-  Glmaps.prototype = {
+        /*Google Position Object*/
+        toLatLng: function (position) {
+            return position instanceof GoogleMaps.LatLng ?
+                position : new GoogleMaps.LatLng(position.latitude, position.longitude);
+        },
+        
+        /*Panning to specefic point*/
+        panToPosition: function (position) {
+            this.map.panTo(this.toLatLng(position));
+            return this;
+        },
 
-    init: function () {
-      return this
-        .createMap()
-        .addMarkers()
-        .createUserMarker()
-        .getUserPosition();
-    },
+        /*Initial Position setup*/
+        setInitialPosition: function (position) {
+            var initialPosition = this.initialPosition = this.toLatLng(position.coords);
 
-  createMap: function () {
-      this.map = new GoogleMaps.Map(this.container, {
-        center: this.toLatLng(this.defaultPosition)
-      , mapTypeControl: false
-      , mapTypeId: GoogleMaps.MapTypeId.ROADMAP
-      , streetViewControl: false
-      , zoom: this.zoom
-      });
+            this.map.setCenter(initialPosition);
 
-      return this;
-    },
+            this.userMarker.setPosition(initialPosition);
 
-  addMarkers: function () {
-      this.markers.forEach(this.createMarker.bind(this));
+            return this.panToPosition(initialPosition);
+        },
+        
+        /*Getting user current location*/
+        getUserPosition: function () {
+            if ('geolocation' in navigator)
+                navigator.geolocation.getCurrentPosition(
+                    this.setInitialPosition.bind(this), this.handleUserPositionError.bind(this), {
+                        enableHighAccuracy: true,
+                        timeout: 6000
+                    }
+                );
 
-      return this;
-    },
+            return this;
+        },
 
-   createUserMarker: function () {
-      var marker = this.userMarker = this.createMarker({
-        position: this.defaultPosition
-      });
+        /*If user location not found.*/
+        handleUserPositionError: function () {
+            return this.notify('Initial location not found.');
+        },
+        
+        getGeoLocation : function () {
+            
+            this.geocoder = new google.maps.Geocoder();
+            this.geocoder.geocode( { 'address': this.defaultLocationByName}, function(results, status) {
 
-      marker.setClickable(false);
+                /*If geocode is success*/
+                if (status == google.maps.GeocoderStatus.OK) {
+                    /*Set map center*/
+                    map.setCenter(results[0].geometry.location);
+                } else {
+                    alert('Geocode was not successful for the following reason: ' + status);
+                }
+            });
+        },
+        
+        /*Simple notify TODO : Change it with something generic */
+        notify: function (message) {
+            var container = this.container,
+                warning = document.createElement('p');
 
-      return this;
-    },
+            warning.innerHTML = message;
 
-  createMarker: function (marker) {
-      return new GoogleMaps.Marker({
-        icon: marker.icon
-      , map: this.map
-      , position: this.toLatLng(marker.position)
-      });
-    },
+            container.appendChild(warning);
 
-  toLatLng: function (position)
-  {
-      return position instanceof GoogleMaps.LatLng ?
-        position : new GoogleMaps.LatLng(position.latitude, position.longitude);
-  },
+            return this;
+        },
+        
+        /*Remove , refresh operations*/
+        
+        setAllMap : function (map) {
+            for (var i = 0; i < this.markers.length; i++) {
+                this.markers[i].setMap(map);
+            }
+        },
 
-  panToPosition: function (position)
-  {
-      this.map.panTo(this.toLatLng(position));
+        // Removes the markers from the map, but keeps them in the array.
+        clearMarkers : function () {
+            this.setAllMap(null);
+        },
 
-      return this;
-  },
+        clearPath : function () {
+            this.path = [];
+        },
 
-  setInitialPosition: function (position)
-    {
-      var initialPosition = this.initialPosition = this.toLatLng(position.coords);
-
-      this.map.setCenter(initialPosition);
-
-      this.userMarker.setPosition(initialPosition);
-
-      return this.panToPosition(initialPosition);
-    },
-
-  getUserPosition: function ()
-    {
-      if ('geolocation' in navigator)
-        navigator.geolocation.getCurrentPosition(
-          this.setInitialPosition.bind(this)
-        , this.handleUserPositionError.bind(this)
-        , {enableHighAccuracy: true, timeout: 6000}
-        );
-
-      return this;
-    },
-
-  handleUserPositionError: function ()
-    {
-      return this.notify('Initial location not found.');
-    },
-
-   notify: function (message)
-    {
-      var container = this.container
-        , warning = document.createElement('p');
-
-      warning.innerHTML = message;
-
-      container.appendChild(warning);
-
-      return this;
-    }
-  };
+        // Shows any markers currently in the array.
+        showMarkers : function (map) {
+          this.setAllMap(map);
+        },
+        
+        // Deletes all markers in the array by removing references to them.
+        deleteMarkers : function () {
+          this.clearMarkers();
+          this.markers = [];
+        },        
+    };
 
 }(google.maps));

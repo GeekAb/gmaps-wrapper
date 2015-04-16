@@ -1,55 +1,59 @@
 <!doctype html>
 <meta charset="UTF-8">
 
-<title>donde.js</title>
+<title>glmaps</title>
 <link rel="stylesheet" href="style.css">
 
 <div id="js-map" class="map"></div>
 
-<script src="https://maps.googleapis.com/maps/api/js?sensor=true"></script>
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
 <script src="../glmaps.js"></script>
 
 <script>
-    new Glmaps({
+    var glydelMap = new Glmaps({
 
         container: 'js-map',
         zoom: 15,
-        defaultPosition: {
-            latitude: -34.8937720817105,
-            longitude: -56.1659574508667
-        },
+        defaultLocationByName:0,
+        defaultPosition: {latitude:12.985573333333333,longitude:77.644505},
         markers: [
             {
                 icon: 'img/marker-1.png',
                 position: {
-                    latitude: -34.790626820565095,
-                    longitude: -56.352119473107685,
+                    latitude: 12.9758,
+                    longitude: 77.63903833333333,
                 }
             }
-    , {
-                icon: 'img/marker-2.png',
-                position: {
-                    latitude: -34.79742147359551,
-                    longitude: -56.24659744591109
-                }
-      }
-    , {
-                icon: 'img/marker-1.png',
-                position: {
-                    latitude: -34.81001579769451,
-                    longitude: -56.221292252489484
-                }
-      }
-    , {
-                icon: 'img/marker-3.png',
-                position: {
-                    latitude: -34.81661616310021,
-                    longitude: -56.13930858324866
-                }
-      }
     ]
     });
+    
+   glydelMap.addMarkers(
+       [
+            {
+                icon: 'img/marker-1.png',
+                position: {
+                    latitude: 12.9758,
+                    longitude: 77.63903833333333,
+                }
+            }
+        ]
+    );
+    
+    glydelMap.addMarkers(
+       [
+            {
+                icon: 'img/marker-2.png',
+                position: {
+                    latitude: 12.98424,
+                    longitude: 77.64093666666666,
+                }
+            }
+        ]
+    );
+    
+//    mp.setMapCenter();
 </script>
+
 
 
 <!--[12.985573333333333,77.644505,"2015-03-23T18:40:47"],
