@@ -10,11 +10,20 @@
         /*Default Position : Can be blank  Default will be 0,0*/
         this.defaultPosition = options.defaultPosition;
         /*Default Markers : Can be blank*/
-        this.markers = options.markers;
+        this.markers = options.markers || {};
+        this.path = options.markers || {};
+        
+        this.boundSet = 0;
+        
         /*Default zoom level*/
-        this.zoom = 6;
+        this.zoom = options.zoom || 6;
+        
+        this.disableDefaultUI = options.disableDefaultUI || false;
         
         this.defaultIcon = '';
+        
+        this.bounds = [];
+        this.map_bounds = [];
 
         return this.init();
     };
@@ -33,26 +42,38 @@
             
             var mapOptions = {
                 zoom: this.zoom,
-//                disableDefaultUI: true,
+                disableDefaultUI: this.disableDefaultUI,
 //                panControl: false,
 //                zoomControl: false,
 //                scaleControl: true,
-                mapTypeId: GoogleMaps.MapTypeId.TERRAIN,
+                mapTypeId: GoogleMaps.MapTypeId.ROADMAP,
                 streetViewControl: false,
                 center: new GoogleMaps.LatLng(this.defaultPosition.latitude, this.defaultPosition.longitude),
             };
                 
             this.map = new GoogleMaps.Map(this.container,mapOptions);
+            
+            this.bounds = new GoogleMaps.LatLngBounds();
+            this.map_bounds = new GoogleMaps.LatLngBounds();
             return this;
         },
         
         setMapCenter : function (position) {
-            this.map.setCenter(position);
+            this.map.panTo(position); /*Changed to panTo to enable animation*/
         },
 
         /*Add Marker to map*/
-        addMarkers: function (markersSet) {
+        addMarkers: function (markersSet, totalCount, keepZoom) {
+            
+            console.log('called');
+            console.log(totalCount && Object.keys(this.markers).length == totalCount && this.boundSet == 0);
             markersSet.forEach(this.createMarker.bind(this));
+            
+            if(totalCount && Object.keys(this.markers).length == totalCount && this.boundSet == 0) {
+                this.map.fitBounds(this.bounds);
+                this.boundSet = 1;
+            }
+            
             return this;
         },
 
@@ -67,15 +88,32 @@
         },
         
         /*Create new marker*/
-        createMarker: function (marker) {            
-            var marker = new GoogleMaps.Marker({
+        createMarker: function (marker) {
+            if(!marker.path)
+                this.bounds.extend(this.toLatLng(marker.position));
+            else 
+                this.map_bounds.extend(this.toLatLng(marker.position));
+            
+            var _marker = new GoogleMaps.Marker({
                 icon: marker.icon,
                 map: this.map,
                 position: this.toLatLng(marker.position)
             });
-            this.markers.push(marker);
             
-            this.createInfoWindow(marker.icon,marker);
+            /*Info Window*/
+            if(marker.content != '')
+                this.createInfoWindow(marker.content,_marker);
+            
+            if(!marker.path) {
+                this.markers[marker.id] = _marker;
+//                this.map.fitBounds(this.bounds);
+            }
+            else {
+                this.path[marker.id] = _marker;
+            }
+            
+            
+            
             return marker;
         },
         
@@ -164,30 +202,46 @@
         /*Remove , refresh operations*/
         
         setAllMap : function (map) {
-            for (var i = 0; i < this.markers.length; i++) {
-                this.markers[i].setMap(map);
-            }
+            $.each(this.markers, function(key, value){
+                value.setMap(map);
+            });
         },
 
         // Removes the markers from the map, but keeps them in the array.
         clearMarkers : function () {
             this.setAllMap(null);
         },
-
+        
         clearPath : function () {
-            this.path = [];
+            $.each(this.path, function(key, value){
+                value.setMap(null);
+            });
         },
+
+//        clearPath : function () {
+//            this.path = [];
+//        },
 
         // Shows any markers currently in the array.
         showMarkers : function (map) {
-          this.setAllMap(map);
+            this.setAllMap(this.map);
         },
         
         // Deletes all markers in the array by removing references to them.
         deleteMarkers : function () {
           this.clearMarkers();
           this.markers = [];
-        },        
+        },
+        
+        updateMarkerPosition : function (marker,newPosition) {
+            marker && marker.setPosition(newPosition);
+            this.map.fitBounds(this.bounds);
+        },
+        
+        setBound : function (bound) {
+            this.map.fitBounds(this.map_bounds);
+//            return 0;
+        },
     };
 
 }(google.maps));
