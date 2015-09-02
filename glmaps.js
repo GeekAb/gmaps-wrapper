@@ -64,9 +64,7 @@
 
         /*Add Marker to map*/
         addMarkers: function (markersSet, totalCount, keepZoom) {
-            
-            console.log('called');
-            console.log(totalCount && Object.keys(this.markers).length == totalCount && this.boundSet == 0);
+
             markersSet.forEach(this.createMarker.bind(this));
             
             if(totalCount && Object.keys(this.markers).length == totalCount && this.boundSet == 0) {
@@ -235,7 +233,6 @@
         
         updateMarkerPosition : function (marker,newPosition) {
             marker && marker.setPosition(newPosition);
-            this.map.fitBounds(this.bounds);
         },
         
         setBound : function (bound) {
